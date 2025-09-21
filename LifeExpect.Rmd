@@ -1,0 +1,770 @@
+---
+title: "lifeexpect'"
+author: "Rahul Pandya"
+date: "2023-11-10"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd(".../project")
+df <- read.csv("led.csv", header = TRUE)
+```
+
+
+```{r}
+df <- df[, !(colnames(df) == "Population")]
+
+```
+
+
+```{r}
+# Load the zoo package (if not already installed)
+# install.packages("zoo")
+library(zoo)
+
+# Apply last observation carried forward (LOCF) to fill missing values
+df <- na.locf(df, fromLast = FALSE)
+
+
+```
+
+```{r}
+# Check for null values in each column of df'
+null_values <- sapply(df, function(x) sum(is.na(x)))
+
+# Print the number of null values in each column
+print(null_values)
+```
+
+
+```{r}
+dim(df)
+```
+
+
+```{r}
+library(dplyr)
+library(corrplot)
+
+# Select numeric columns for mathematical and statistical operations
+LifeExpectancyData_num <- df %>%
+  select_if(is.numeric)
+
+```
+
+```{r}
+# Load the required packages
+library(dplyr)
+library(corrplot)
+
+# Select numeric columns for mathematical and statistical operations
+LifeExpectancyData_num <- df %>%
+  select_if(is.numeric)
+
+# Calculate the correlation matrix for all numeric variables
+corr_matrix <- cor(LifeExpectancyData_num)
+
+# Sort variables by their correlation with "Lifeexpectancy"
+corr_list <- names(sort(corr_matrix["Lifeexpectancy",], decreasing = TRUE))[-1]
+
+
+
+```
+
+```{r}
+# Print the correlation matrix
+print(corr_matrix)
+```
+
+
+```{r}
+
+# Plot the heatmap
+corrplot(corr_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+```
+
+
+```{r}
+# Load the required packages
+library(dplyr)
+library(corrplot)
+
+# Select the columns of interest
+columns_of_interest <- c('HepatitisB', 'Measles', 'Polio', 'Diphtheria', 'HIV.AIDS', 'thinness1.19years', 'thinness5.9years', 'Lifeexpectancy')
+
+# Create a subset of the DataFrame with the selected columns
+subset_df <- df[, columns_of_interest]
+
+# Calculate the correlation matrix for the selected columns
+corr_matrix <- cor(subset_df)
+
+# Sort variables by their correlation with 'Lifeexpectancy'
+corr_list <- names(sort(corr_matrix[, "Lifeexpectancy"], decreasing = TRUE))[-1]
+
+# Print the sorted variables
+print(corr_list)
+
+# Plot the heatmap
+corrplot(corr_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45)
+
+
+```
+
+
+```{r}
+# Convert columns to numeric (assuming df is your DataFrame)
+numeric_df <- sapply(df, as.numeric)
+
+# Calculate Z-scores for each column
+z_scores <- as.data.frame(scale(numeric_df))
+
+# Set a threshold for defining outliers (e.g., Z-score > 3 or < -3)
+outlier_threshold <- 3
+
+# Identify rows with outliers in any column
+outliers <- apply(abs(z_scores) > outlier_threshold, 1, any)
+
+# Print the number of rows with outliers
+cat("Number of rows with outliers: ", sum(outliers), "\n")
+
+# You can choose to remove rows with outliers
+cleaned_df <- df[!outliers,]
+
+# Alternatively, replace outliers with NA or a specific value
+# For example, replace with NA
+df[z_scores > outlier_threshold] <- NA
+
+
+```
+
+```{r}
+# Check for null values in each column of df'
+null_values <- sapply(df, function(x) sum(is.na(x)))
+
+# Print the number of null values in each column
+print(null_values)
+```
+
+```{r}
+# Drop rows with NA values
+cleaned_df <- na.omit(df)
+
+# Check the dimensions of the cleaned DataFrame
+dim(cleaned_df)
+
+```
+
+```{r}
+df2 <- cleaned_df
+```
+
+```{r}
+str(df2)
+```
+
+```{r}
+# Remove the "Country" column
+df2 <- df2[-1]
+
+# Convert "Status" to binary (0 for "Developing" and 1 for "Developed")
+df2$Status <- ifelse(df2$Status == "Developed", 1, 0)
+
+# Check the modified DataFrame
+str(df2)
+
+```
+
+
+```{r}
+# Remove the "Country" column
+df <- df[-1]
+
+model <- lm(Lifeexpectancy ~., data=df2)
+summary(model)
+```
+
+```{r}
+# Remove the "Country" column
+df2 <- df2[,-c(1)]
+
+model <- lm(Lifeexpectancy ~., data=df2)
+summary(model)
+```
+
+```{r}
+# Remove the "Country" column
+df2 <- df2[,-c(7,15,8,5,16)]
+
+model <- lm(Lifeexpectancy ~., data=df2)
+summary(model)
+```
+
+
+```{r}
+# Load the corrplot package
+library(corrplot)
+
+# Calculate the correlation matrix for the final variables in your dataset
+correlation_matrix <- cor(df2)
+
+# Create the correlation plot
+corrplot(correlation_matrix, method = "color", type = "upper", order = "hclust")
+
+# You can customize the plot further if needed, for example:
+# corrplot(correlation_matrix, method = "color", type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
+
+
+```
+
+```{r}
+print(correlation_matrix)
+```
+
+```{r}
+# Make predictions using the final model
+predictions <- predict(model, newdata = df2)
+
+# Calculate the residuals (actual - predicted values)
+residuals <- df2$Lifeexpectancy - predictions
+
+# Calculate the Mean Squared Error (MSE)
+mse <- mean(residuals^2)
+
+# Print the MSE
+cat("Mean Squared Error (MSE):", mse, "\n")
+
+```
+
+
+
+```{r}
+# Add new columns for the interaction and quadratic terms
+df3 <- df2 %>%
+  mutate(
+    Interaction_AM_HIV = AdultMortality * HIV.AIDS,
+    Interaction_ICR_Schooling = Incomecompositionofresources * Schooling,
+    Interaction_ICR_BMI = Incomecompositionofresources * BMI
+  )
+
+```
+
+```{r}
+# Remove the "Country" column
+model <- lm(Lifeexpectancy ~., data=df3)
+summary(model)
+```
+
+```{r}
+# Make predictions using the final model
+predictions <- predict(model, newdata = df3)
+
+# Calculate the residuals (actual - predicted values)
+residuals <- df2$Lifeexpectancy - predictions
+
+# Calculate the Mean Squared Error (MSE)
+mse <- mean(residuals^2)
+
+# Print the MSE
+cat("Mean Squared Error (MSE):", mse, "\n")
+
+```
+
+```{r}
+# Load necessary library
+library(boot)
+
+# Define the number of folds for cross-validation
+num_folds <- 5
+
+# Create an index for splitting the data
+set.seed(123) # for reproducibility
+folds <- sample(1:num_folds, nrow(df3), replace = TRUE)
+
+# Initialize a vector to store RMSE values
+rmse_values <- numeric(num_folds)
+
+# Perform k-fold cross-validation
+for (fold in 1:num_folds) {
+  # Split the data into training and test sets
+  train_data <- df3[folds != fold, ]
+  test_data <- df3[folds == fold, ]
+  
+  # Fit a linear regression model on the training data
+  model <- lm(Lifeexpectancy ~ ., data = train_data)
+  
+  # Make predictions on the test data
+  predictions <- predict(model, newdata = test_data)
+  
+  # Calculate the residuals and RMSE
+  residuals <- test_data$Lifeexpectancy - predictions
+  rmse_values[fold] <- sqrt(mean(residuals^2))
+}
+
+# Print RMSE values for each fold
+cat("RMSE values for each fold:", rmse_values, "\n")
+
+# Calculate and print the mean and standard deviation of RMSE values
+mean_rmse <- mean(rmse_values)
+std_dev_rmse <- sd(rmse_values)
+cat("Mean RMSE:", mean_rmse, "\n")
+cat("Standard Deviation of RMSE:", std_dev_rmse, "\n")
+
+```
+
+```{r}
+#58.6 should be predicted
+# Sample data with predictor variables (adjust the values accordingly)
+sample_data <- data.frame(
+  Status = 0,  # Replace with the appropriate value
+  AdultMortality = 281,  # Replace with the appropriate value
+  infantdeaths = 77,      # Replace with the appropriate value
+  percentageexpenditure = 56.762,  # Replace with the appropriate value
+  BMI = 16.2,              # Replace with the appropriate value
+  under.fivedeaths = 106,  # Replace with the appropriate value
+  Polio = 63,            # Replace with the appropriate value
+  Totalexpenditure = 9.4,  # Replace with the appropriate value
+  Diphtheria = 63,       # Replace with the appropriate value
+  HIV.AIDS = 0.1,        # Replace with the appropriate value
+  thinness5.9years = 18.7,  # Replace with the appropriate value
+  Interaction_AM_HIV = 28.1,
+  Interaction_ICR_Schooling = 3.86,
+  Interaction_ICR_BMI =7.03,
+  Incomecompositionofresources = 0.434,  # Replace with the appropriate value
+  Schooling = 8.9         # Replace with the appropriate value
+)
+
+# Make predictions for life expectancy using the trained model
+predicted_life_expectancy <- predict(model, newdata = sample_data)
+
+# Print the predicted life expectancy
+cat("Predicted Life Expectancy:", predicted_life_expectancy, "\n")
+
+```
+
+```{r}
+# Load necessary libraries
+library(glmnet)
+library(boot)
+
+
+# Function for Lasso regression with k-fold cross-validation
+lasso_regression <- function(data, num_folds, alpha = 1) {
+  set.seed(123)  # for reproducibility
+  folds <- sample(1:num_folds, nrow(data), replace = TRUE)
+  
+  rmse_values <- numeric(num_folds)
+  
+  for (fold in 1:num_folds) {
+    train_data <- data[folds != fold, ]
+    test_data <- data[folds == fold, ]
+    
+    x_train <- model.matrix(Lifeexpectancy ~ ., data = train_data)
+    y_train <- train_data$Lifeexpectancy
+    
+    x_test <- model.matrix(Lifeexpectancy ~ ., data = test_data)
+    y_test <- test_data$Lifeexpectancy
+    
+    model <- glmnet(x_train, y_train, alpha = alpha)
+    
+    predictions <- predict(model, newx = x_test)
+    
+    residuals <- y_test - predictions
+    rmse_values[fold] <- sqrt(mean(residuals^2))
+  }
+  
+  return(rmse_values)
+}
+
+# Function for Ridge regression with k-fold cross-validation
+ridge_regression <- function(data, num_folds, alpha = 0) {
+  # Call the lasso_regression function with alpha = 0 for Ridge regression
+  lasso_regression(data, num_folds, alpha)
+}
+
+```
+
+
+```{r}
+# Perform Lasso regression
+num_folds <- 5  # Define the number of folds
+alpha_lasso <- 1  # Lasso regression with alpha = 1
+
+rmse_values_lasso <- lasso_regression(df3, num_folds, alpha_lasso)
+
+# Calculate and print the mean and standard deviation of RMSE values for Lasso
+mean_rmse_lasso <- mean(rmse_values_lasso)
+std_dev_rmse_lasso <- sd(rmse_values_lasso)
+cat("Lasso Regression - Mean RMSE:", mean_rmse_lasso, "\n")
+cat("Lasso Regression - Standard Deviation of RMSE:", std_dev_rmse_lasso, "\n")
+
+```
+
+```{r}
+# Perform Ridge regression
+alpha_ridge <- 0  # Ridge regression with alpha = 0
+
+rmse_values_ridge <- ridge_regression(df3, num_folds, alpha_ridge)
+
+# Calculate and print the mean and standard deviation of RMSE values for Ridge
+mean_rmse_ridge <- mean(rmse_values_ridge)
+std_dev_rmse_ridge <- sd(rmse_values_ridge)
+cat("Ridge Regression - Mean RMSE:", mean_rmse_ridge, "\n")
+cat("Ridge Regression - Standard Deviation of RMSE:", std_dev_rmse_ridge, "\n")
+
+```
+
+```{r}
+# Function for Elastic Net regression with k-fold cross-validation
+elastic_net_regression <- function(data, num_folds, alpha = 0.5) {
+  set.seed(123)  # for reproducibility
+  folds <- sample(1:num_folds, nrow(data), replace = TRUE)
+  
+  rmse_values <- numeric(num_folds)
+  
+  for (fold in 1:num_folds) {
+    train_data <- data[folds != fold, ]
+    test_data <- data[folds == fold, ]
+    
+    x_train <- model.matrix(Lifeexpectancy ~ ., data = train_data)
+    y_train <- train_data$Lifeexpectancy
+    
+    x_test <- model.matrix(Lifeexpectancy ~ ., data = test_data)
+    y_test <- test_data$Lifeexpectancy
+    
+    model <- cv.glmnet(x_train, y_train, alpha = alpha)
+    
+    best_lambda <- model$lambda.min
+    predictions <- predict(model, s = best_lambda, newx = x_test)
+    
+    residuals <- y_test - predictions
+    rmse_values[fold] <- sqrt(mean(residuals^2))
+  }
+  
+  return(rmse_values)
+}
+
+```
+
+
+```{r}
+# Perform Elastic Net regression
+num_folds <- 5  # Define the number of folds
+alpha_elastic_net <- 0.5  # Elastic Net regression with alpha = 0.5 (a balanced mix of Lasso and Ridge)
+
+rmse_values_elastic_net <- elastic_net_regression(df3, num_folds, alpha_elastic_net)
+
+# Calculate and print the mean and standard deviation of RMSE values for Elastic Net
+mean_rmse_elastic_net <- mean(rmse_values_elastic_net)
+std_dev_rmse_elastic_net <- sd(rmse_values_elastic_net)
+cat("Elastic Net Regression - Mean RMSE:", mean_rmse_elastic_net, "\n")
+cat("Elastic Net Regression - Standard Deviation of RMSE:", std_dev_rmse_elastic_net, "\n")
+
+```
+
+
+```{r}
+#58.6 should be predicted
+# Sample data with predictor variables (adjust the values accordingly)
+sample_data <- data.frame(
+  Status = 0,  # Replace with the appropriate value
+  AdultMortality = 281,  # Replace with the appropriate value
+  infantdeaths = 77,      # Replace with the appropriate value
+  percentageexpenditure = 56.762,  # Replace with the appropriate value
+  BMI = 16.2,              # Replace with the appropriate value
+  under.fivedeaths = 106,  # Replace with the appropriate value
+  Polio = 63,            # Replace with the appropriate value
+  Totalexpenditure = 9.4,  # Replace with the appropriate value
+  Diphtheria = 63,       # Replace with the appropriate value
+  HIV.AIDS = 0.1,        # Replace with the appropriate value
+  thinness5.9years = 18.7,  # Replace with the appropriate value
+  Interaction_AM_HIV = 28.1,
+  Interaction_ICR_Schooling = 3.86,
+  Interaction_ICR_BMI =7.03,
+  Incomecompositionofresources = 0.434,  # Replace with the appropriate value
+  Schooling = 8.9         # Replace with the appropriate value
+)
+
+# Make predictions for life expectancy using the trained model
+predicted_life_expectancy <- predict(model, newdata = sample_data)
+
+# Print the predicted life expectancy
+cat("Predicted Life Expectancy:", predicted_life_expectancy, "\n")
+
+```
+
+
+```{r}
+# Install necessary packages if you haven't already
+#install.packages("glmnet")
+#install.packages("pROC")
+#install.packages("Metrics")
+
+# Load necessary libraries
+library(boot)
+library(pROC)
+library(glmnet)
+library(Metrics)
+
+
+# Define the number of folds for cross-validation
+num_folds <- 5
+
+# Create an index for splitting the data
+set.seed(123) # for reproducibility
+folds <- sample(1:num_folds, nrow(df3), replace = TRUE)
+
+# Initialize vectors to store results
+mse_values <- numeric(num_folds)
+accuracy_values <- numeric(num_folds)
+roc_values <- list()
+
+```
+
+```{r}
+str(df3)
+```
+
+```{r}
+summary(df3)
+```
+
+```{r}
+# Install necessary packages if you haven't already
+#install.packages("glmnet")
+#install.packages("pROC")
+#install.packages("Metrics")
+
+# Load necessary libraries
+library(boot)
+library(pROC)
+library(glmnet)
+library(Metrics)
+
+
+```
+
+
+
+
+
+```{r}
+# Load required libraries
+library(glmnet)
+library(caret)
+library(pROC)
+
+# Create a new binary variable based on a threshold (e.g., 70)
+df3$Lifeexpectancy_binary <- ifelse(df3$Lifeexpectancy >= 70, 1, 0)
+
+# Define the number of folds for cross-validation
+num_folds <- 5
+
+# Initialize lists to store results
+mse_values <- numeric(num_folds)
+accuracy_values <- numeric(num_folds)
+roc_values <- list()
+
+# Create a list to store model names
+model_names <- c("Linear Regression", "Lasso Regression", "Ridge Regression", "Elastic Net")
+
+# Create an empty list to store mean AUC values
+mean_auc_values <- numeric(length(model_names))
+
+# Perform k-fold cross-validation for all models
+for (model_name in model_names) {
+  for (fold in 1:num_folds) {
+    set.seed(123) # Set the seed before splitting
+    folds <- sample(1:num_folds, nrow(df3), replace = TRUE)
+    
+    train_data <- df3[folds != fold, ]
+    test_data <- df3[folds == fold, ]
+    
+    # Fit the regression model on the training data
+    if (model_name == "Linear Regression") {
+      model <- lm(Lifeexpectancy_binary ~ ., data = train_data)
+    } else if (model_name %in% c("Lasso Regression", "Ridge Regression", "Elastic Net")) {
+      model <- glmnet(
+        model.matrix(Lifeexpectancy_binary ~ ., data = train_data),
+        train_data$Lifeexpectancy_binary,
+        alpha = ifelse(model_name == "Lasso Regression", 1, ifelse(model_name == "Ridge Regression", 0, 0.5))
+      )
+    }
+    
+    # Make predictions on the test data
+    if (model_name == "Linear Regression") {
+      predictions <- predict(model, newdata = test_data)
+    } else if (model_name %in% c("Lasso Regression", "Ridge Regression", "Elastic Net")) {
+      predictions <- as.vector(predict(model, newx = model.matrix(Lifeexpectancy_binary ~ ., data = test_data), s = 0.01))
+    }
+    
+    # Extract the binary response variable for the test data
+    test_response <- test_data$Lifeexpectancy_binary
+    
+    # Calculate the residuals and MSE for the model
+    residuals <- test_response - round(predictions)
+    mse_values[fold] <- mean(residuals^2)
+    
+    # Calculate the accuracy for the model
+    accuracy_values[fold] <- accuracy(test_response, round(predictions))
+    
+    # Calculate ROC and AUC for the model
+    roc_model <- roc(test_response, predictions)
+    roc_values[[model_name]][[fold]] <- roc_model
+  }
+
+  # Calculate the mean AUC value for the model
+  mean_auc_values[model_name] <- mean(sapply(roc_values[[model_name]], function(x) x$auc))
+}
+
+# Print the model results
+for (model_name in model_names) {
+  cat(paste("Model:", model_name, "\n"))
+  cat(paste("Accuracy Mean:", mean(accuracy_values), "\n"))
+  cat(paste("MSE Mean:", mean(mse_values), "\n"))
+  cat(paste("RMSE Mean:", sqrt(mean(mse_values)), "\n"))
+  cat(paste("AUC Mean:", mean_auc_values[model_name], "\n"))
+  
+  # Plot ROC Curves
+  for (fold in 1:num_folds) {
+    plot(roc_values[[model_name]][[fold]])
+    title(paste(model_name, "ROC Curve - Fold", fold))
+  }
+}
+
+# Print the mean AUC values
+cat("Mean AUC values for each model:\n")
+cat(mean_auc_values)
+
+
+```
+
+```{r}
+# Create a subset of the first 10 rows of the dataframe for prediction
+subset_df <- df3[1:10, ]
+
+# Define the models
+models <- list(
+  Linear_Regression = lm(Lifeexpectancy_binary ~ ., data = df3),
+  Lasso_Regression = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 1),
+  Ridge_Regression = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 0),
+  Elastic_Net = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 0.5)
+)
+
+# Predict using the models
+predictions <- lapply(models, function(model) {
+  if (inherits(model, "lm")) {
+    predict(model, newdata = subset_df)
+  } else {
+    as.vector(predict(model, newx = model.matrix(Lifeexpectancy_binary ~ ., data = subset_df), s = 0.01))
+  }
+})
+
+# Combine actual and predicted values into a table
+comparison_table <- data.frame(
+  Actual = subset_df$Lifeexpectancy_binary,
+  Linear_Regression = round(predictions$Linear_Regression),
+  Lasso_Regression = round(predictions$Lasso_Regression),
+  Ridge_Regression = round(predictions$Ridge_Regression),
+  Elastic_Net = round(predictions$Elastic_Net)
+)
+
+# Print the comparison table
+print(comparison_table)
+
+
+```
+
+
+```{r}
+# Set a seed for reproducibility
+set.seed(123)
+
+# Sample 10 random rows from the dataframe
+sample_rows <- sample(1:nrow(df3), 10)
+
+# Create a subset of the randomly selected 10 rows
+subset_df <- df3[sample_rows, ]
+
+# Define the models
+models <- list(
+  Linear_Regression = lm(Lifeexpectancy_binary ~ ., data = df3),
+  Lasso_Regression = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 1),
+  Ridge_Regression = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 0),
+  Elastic_Net = glmnet(model.matrix(Lifeexpectancy_binary ~ ., data = df3), df3$Lifeexpectancy_binary, alpha = 0.5)
+)
+
+# Predict using the models
+predictions <- lapply(models, function(model) {
+  if (inherits(model, "lm")) {
+    predict(model, newdata = subset_df)
+  } else {
+    as.vector(predict(model, newx = model.matrix(Lifeexpectancy_binary ~ ., data = subset_df), s = 0.01))
+  }
+})
+
+# Combine actual and predicted values into a table
+comparison_table <- data.frame(
+  Actual = subset_df$Lifeexpectancy_binary,
+  Linear_Regression = round(predictions$Linear_Regression),
+  Lasso_Regression = round(predictions$Lasso_Regression),
+  Ridge_Regression = round(predictions$Ridge_Regression),
+  Elastic_Net = round(predictions$Elastic_Net)
+)
+
+# Print the comparison table
+print(comparison_table)
+```
+
+
+```{r}
+# Set a seed for reproducibility
+set.seed(123)
+
+# Sample 10 random rows from the dataframe
+sample_rows <- sample(1:nrow(df3), 10)
+
+# Create a subset of the randomly selected 10 rows
+subset_df <- df3[sample_rows, ]
+
+str(subset_df)
+```
+```{r}
+# Define the models
+models <- list(
+  Linear_Regression = lm(Lifeexpectancy ~ ., data = df3),
+  Lasso_Regression = glmnet(model.matrix(Lifeexpectancy ~ ., data = df3), df3$Lifeexpectancy, alpha = 1),
+  Ridge_Regression = glmnet(model.matrix(Lifeexpectancy ~ ., data = df3), df3$Lifeexpectancy, alpha = 0),
+  Elastic_Net = glmnet(model.matrix(Lifeexpectancy ~ ., data = df3), df3$Lifeexpectancy, alpha = 0.5)
+)
+
+# Predict using the models
+predictions <- lapply(models, function(model) {
+  if (inherits(model, "lm")) {
+    predict(model, newdata = subset_df)
+  } else {
+    as.vector(predict(model, newx = model.matrix(Lifeexpectancy ~ ., data = subset_df), s = 0.01))
+  }
+})
+
+# Combine actual and predicted values into a table
+comparison_table <- data.frame(
+  Actual = subset_df$Lifeexpectancy,
+  Linear_Regression = round(predictions$Linear_Regression),
+  Lasso_Regression = round(predictions$Lasso_Regression),
+  Ridge_Regression = round(predictions$Ridge_Regression),
+  Elastic_Net = round(predictions$Elastic_Net)
+)
+
+# Print the comparison table
+print(comparison_table)
+```
+
+
+
